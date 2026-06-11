@@ -388,23 +388,46 @@ def get_charts():
 def get_fundamentals(ticker):
     try:
         stock = yf.Ticker(ticker.upper())
-        fast  = stock.fast_info
-        info  = {}
-        try:
-            raw = stock.info
-            if isinstance(raw, dict):
-                info = raw
-        except Exception:
-            pass
 
         def sf(val):
             try: return float(val) if val not in (None, '') else None
             except: return None
 
-        pe      = sf(info.get('trailingPE') or info.get('forwardPE'))
-        beta    = sf(info.get('beta'))
-        volume  = sf(safe_get(fast, 'three_month_average_volume') or info.get('averageVolume') or info.get('volume'))
-        mkt_cap = sf(safe_get(fast, 'market_cap') or info.get('marketCap'))
+        # Try fast_info first for market data
+        fast = None
+        try:
+            fast = stock.fast_info
+        except Exception:
+            pass
+
+        # Try stock.info with retries — primary source for PE and beta
+        info = {}
+        for attempt in range(3):
+            try:
+                raw = stock.info
+                if isinstance(raw, dict) and len(raw) > 5:
+                    info = raw
+                    break
+            except Exception:
+                pass
+            time.sleep(1)
+
+        # PE: try multiple keys in order of preference
+        pe = None
+        for key in ('trailingPE', 'forwardPE', 'trailingEps'):
+            val = sf(info.get(key))
+            if val is not None and val > 0:
+                pe = val
+                break
+
+        # Beta: try info first, then fast_info
+        beta = sf(info.get('beta'))
+        if beta is None and fast is not None:
+            beta = sf(safe_get(fast, 'beta'))
+
+        # Volume and market cap
+        volume  = sf(safe_get(fast, 'three_month_average_volume') if fast else None)                   or sf(info.get('averageVolume'))                   or sf(info.get('volume'))
+        mkt_cap = sf(safe_get(fast, 'market_cap') if fast else None)                   or sf(info.get('marketCap'))
 
         return jsonify({
             'ticker':  ticker.upper(),
