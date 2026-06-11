@@ -57,10 +57,12 @@
     .hint code { background: var(--surf2); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
     .date-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
     .date-row label { font-size: 13px; color: var(--muted); white-space: nowrap; }
-    .btn-row { display: flex; gap: 9px; align-items: center; margin-top: 14px; }
-    .btn-row .btn { flex: 1; }
     .date-input { padding: 8px 11px; border-radius: 9px; border: 1px solid var(--border); background: var(--surf2); color: var(--text); font-size: 13px; outline: none; color-scheme: dark light; }
     .date-input:focus { border-color: var(--primary); }
+    .file-row { display: flex; gap: 9px; align-items: center; }
+    .file-label { flex: 1; min-height: 40px; padding: 9px 12px; border-radius: 10px; border: 1px dashed var(--border); background: var(--surf2); color: var(--muted); display: flex; align-items: center; gap: 7px; font-size: 13px; overflow: hidden; white-space: nowrap; cursor: pointer; transition: border-color .15s, color .15s; }
+    .file-label:hover { border-color: var(--primary); color: var(--text); }
+    #fileInput { display: none; }
     .btn { height: 40px; padding: 0 20px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; transition: opacity .15s; white-space: nowrap; }
     .btn:hover:not(:disabled) { opacity: .82; }
     .btn:disabled { opacity: .4; cursor: not-allowed; }
@@ -70,7 +72,7 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinning { animation: spin .7s linear infinite; }
 
-    /* progress card */
+    /* ── progress card ── */
     .prog-card { display: flex; flex-direction: column; justify-content: center; }
     .prog-card.idle .prog-body { opacity: .35; pointer-events: none; }
     .prog-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 10px; }
@@ -85,7 +87,7 @@
     .prow.ok  .dot { background: var(--success); }
     .prow.err .dot { background: var(--danger); }
 
-    /* error banner */
+    /* ── error banner ── */
     .err-banner { display: none; margin-bottom: 14px; padding: 12px 16px; border-radius: 10px; font-size: 13px; background: color-mix(in oklab,var(--danger) 10%,var(--surface)); color: var(--danger); border: 1px solid color-mix(in oklab,var(--danger) 25%,transparent); }
 
     /* ── KPI strip ── */
@@ -98,24 +100,32 @@
     .down { color: var(--danger); }
     .neu  { color: var(--text); }
 
-
     /* ── table ── */
     .tbl-card { padding: 0; overflow: hidden; }
-    .tbl-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-    .tbl-title { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+    .tbl-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .tbl-title { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); white-space: nowrap; }
     .tbl-meta  { font-size: 13px; color: var(--muted); }
+    .tbl-search { flex: 1; max-width: 260px; padding: 7px 11px; border-radius: 8px; border: 1px solid var(--border); background: var(--surf2); color: var(--text); font-size: 13px; outline: none; }
+    .tbl-search:focus { border-color: var(--primary); }
     .tbl-wrap  { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 11px 16px; font-size: 13px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border); }
-    th { color: var(--muted); font-weight: 600; }
+    th { color: var(--muted); font-weight: 600; user-select: none; }
+    th.sortable { cursor: pointer; }
+    th.sortable:hover { color: var(--text); }
+    th .sort-arrow { display: inline-block; margin-left: 4px; opacity: .4; font-size: 10px; }
+    th.asc  .sort-arrow::after { content: '▲'; opacity: 1; }
+    th.desc .sort-arrow::after { content: '▼'; opacity: 1; }
+    th:not(.asc):not(.desc) .sort-arrow::after { content: '⇅'; }
     tr:last-child td { border-bottom: none; }
     th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; }
     .ticker-badge { display: inline-block; padding: 2px 9px; border-radius: 99px; background: var(--surf2); border: 1px solid var(--border); font-size: 12px; font-weight: 600; }
     .pill { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
     .pill.up   { background: color-mix(in oklab,var(--success) 14%,var(--surf2)); color: var(--success); }
     .pill.down { background: color-mix(in oklab,var(--danger)  14%,var(--surf2)); color: var(--danger); }
+    tr.hidden-row { display: none; }
 
-    /* failed section */
+    /* ── failed section ── */
     .failed-sec { display: none; border-top: 1px solid var(--border); padding: 16px 20px; }
     .failed-sec.show { display: block; }
     .failed-ttl { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--danger); font-weight: 700; margin-bottom: 10px; }
@@ -124,8 +134,7 @@
     .failed-ticker { min-width: 60px; font-weight: 700; color: var(--danger); }
     .failed-reason { color: var(--muted); }
 
-
-        /* ── chart grid ── */
+    /* ── charts ── */
     .charts-section { margin-bottom: 16px; }
     .charts-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; margin-bottom: 12px; }
     .chart-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
@@ -155,15 +164,20 @@
     .mc-fund-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 2px; }
     .mc-fund-val { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
 
+    /* ── export btn ── */
+    .btn-export { height: 32px; padding: 0 14px; font-size: 12px; font-weight: 600; border-radius: 8px; background: var(--surf2); color: var(--muted); border: 1px solid var(--border); transition: background .15s, color .15s; }
+    .btn-export:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+
     @media (max-width: 1100px) { .chart-grid { grid-template-columns: repeat(3,1fr); } }
     @media (max-width: 760px)  { .chart-grid { grid-template-columns: repeat(2,1fr); } }
-    @media (max-width: 460px)  { .chart-grid { grid-template-columns: 1fr; } } }
+    @media (max-width: 460px)  { .chart-grid { grid-template-columns: 1fr; } }
     @media (max-width: 900px) {
       .ctrl-row { grid-template-columns: 1fr; }
       .kpi-strip { grid-template-columns: repeat(3,1fr); }
     }
     @media (max-width: 540px) {
       .kpi-strip { grid-template-columns: repeat(2,1fr); }
+      .tbl-search { max-width: 100%; }
     }
   </style>
 </head>
@@ -190,13 +204,19 @@
   <!-- Controls -->
   <div class="ctrl-row">
     <div class="card upload-card">
-      <h2>Portfolio</h2>
+      <h2>Load portfolio</h2>
+      <p class="hint">Required columns: <code>ticker</code>, <code>weight</code>, <code>price</code>&nbsp;(start price) · <span id="defaultStatus" style="color:var(--primary)">Loading default portfolio…</span></p>
       <div class="date-row">
         <label for="startDate">Start date</label>
         <input type="date" id="startDate" class="date-input" value="2026-04-10" />
       </div>
-      <div class="btn-row">
-        <button class="btn" id="loadBtn">Refresh prices</button>
+      <div class="file-row">
+        <label class="file-label" for="fileInput">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span id="fileLabelTxt">Choose CSV file…</span>
+        </label>
+        <input type="file" id="fileInput" accept=".csv" />
+        <button class="btn" id="loadBtn">Load portfolio</button>
         <button class="btn btn-refresh" id="refreshBtn" title="Refresh prices" disabled>
           <svg id="refreshIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="23 4 23 10 17 10"/>
@@ -209,7 +229,7 @@
     <div class="card prog-card idle" id="progCard">
       <div class="prog-body">
         <div class="prog-top">
-          <span class="prog-label" id="progLabel">Click Refresh prices to load…</span>
+          <span class="prog-label" id="progLabel">Waiting for upload…</span>
           <span class="prog-pct"  id="progPct"></span>
         </div>
         <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
@@ -220,7 +240,7 @@
   </div>
 
   <!-- KPI strip -->
-  <div class="kpi-strip" id="kpiStrip">
+  <div class="kpi-strip" id="kpiStrip" style="display:none">
     <div class="kpi-cell">
       <div class="kpi-lbl">Portfolio return</div>
       <div class="kpi-val" id="kvPortRet">—</div>
@@ -253,9 +273,8 @@
     </div>
   </div>
 
-
   <!-- Charts grid -->
-  <div class="charts-section" id="chartsSection">
+  <div class="charts-section" id="chartsSection" style="display:none">
     <div class="charts-section-title">Performance since start date</div>
     <div class="chart-grid" id="chartGrid"></div>
   </div>
@@ -264,24 +283,26 @@
   <div class="card tbl-card">
     <div class="tbl-head">
       <div class="tbl-title">Holdings</div>
+      <input type="search" class="tbl-search" id="tblSearch" placeholder="Filter tickers or names…" />
       <div class="tbl-meta" id="tblMeta">No portfolio loaded.</div>
+      <button class="btn-export" id="exportBtn" style="display:none" onclick="exportCsv()">↓ Export CSV</button>
     </div>
     <div class="tbl-wrap">
-      <table>
+      <table id="holdingsTable">
         <thead>
           <tr>
-            <th>Ticker</th>
-            <th>Name</th>
-            <th class="r">Weight</th>
-            <th class="r">Start price</th>
-            <th class="r">Current price</th>
-            <th class="r">Return</th>
-            <th class="r">Weighted return</th>
-            <th class="r">Day change</th>
+            <th class="sortable" data-col="ticker">Ticker<span class="sort-arrow"></span></th>
+            <th class="sortable" data-col="name">Name<span class="sort-arrow"></span></th>
+            <th class="sortable r" data-col="weight">Weight<span class="sort-arrow"></span></th>
+            <th class="sortable r" data-col="start_price">Start price<span class="sort-arrow"></span></th>
+            <th class="sortable r" data-col="price">Current price<span class="sort-arrow"></span></th>
+            <th class="sortable r" data-col="ret">Return<span class="sort-arrow"></span></th>
+            <th class="sortable r" data-col="wret">Weighted return<span class="sort-arrow"></span></th>
+            <th class="sortable r" data-col="change_pct">Day change<span class="sort-arrow"></span></th>
           </tr>
         </thead>
         <tbody id="tblBody">
-          <tr><td colspan="8" style="color:var(--muted);padding:22px 16px">Click Refresh prices to load holdings.</td></tr>
+          <tr><td colspan="8" style="color:var(--muted);padding:22px 16px">Upload a CSV to see holdings here.</td></tr>
         </tbody>
       </table>
     </div>
@@ -292,6 +313,7 @@
   </div>
 
 </div><!-- /wrap -->
+
 <script>
 const API = '';
 
@@ -301,28 +323,36 @@ document.documentElement.setAttribute('data-theme', theme);
 document.getElementById('themeToggle').addEventListener('click', () => {
   theme = theme === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', theme);
+  const icon = document.getElementById('themeIcon');
+  if (theme === 'light') {
+    icon.innerHTML = '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
+  } else {
+    icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  }
 });
 
 // ── state ─────────────────────────────────────────────────────────────────────
-let _portRet   = null, _spxRet    = null;
+let _portRet = null, _spxRet = null;
+let _allHoldings = [];  // full dataset for sorting/filtering/export
+let _sortCol = null, _sortDir = 'asc';
 
 function cv(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
-function showErr(msg) { const e = document.getElementById('errBanner'); e.textContent = '⚠ '+msg; e.style.display = 'block'; }
+function showErr(msg) { const e = document.getElementById('errBanner'); e.textContent = '⚠ ' + msg; e.style.display = 'block'; }
 function clearErr()   { const e = document.getElementById('errBanner'); e.textContent = ''; e.style.display = 'none'; }
 
 function calcRet(start, cur) {
   if (start == null || +start <= 0) return null;
   return ((+cur - +start) / +start) * 100;
 }
-function fmtPct(v, digits=2) {
+function fmtPct(v, digits = 2) {
   if (v == null) return null;
-  return `${v>=0?'+':''}${v.toFixed(digits)}%`;
+  return `${v >= 0 ? '+' : ''}${v.toFixed(digits)}%`;
 }
 function pill(pct) {
   if (pct == null) return '<span style="color:var(--muted)">—</span>';
-  return `<span class="pill ${pct>=0?'up':'down'}">${fmtPct(pct)}</span>`;
+  return `<span class="pill ${pct >= 0 ? 'up' : 'down'}">${fmtPct(pct)}</span>`;
 }
 
 // ── progress ──────────────────────────────────────────────────────────────────
@@ -335,12 +365,12 @@ function progStart(total) {
   document.getElementById('progRows').innerHTML   = '';
 }
 function progTick(done, total, ticker, ok, errMsg) {
-  document.getElementById('progFill').style.width = Math.round(done/total*100)+'%';
+  document.getElementById('progFill').style.width = Math.round(done / total * 100) + '%';
   document.getElementById('progPct').textContent  = `${done} / ${total}`;
-  document.getElementById('progSub').textContent  = ok ? `✓ ${ticker}` : `✗ ${ticker}${errMsg?': '+errMsg:''}`;
+  document.getElementById('progSub').textContent  = ok ? `✓ ${ticker}` : `✗ ${ticker}${errMsg ? ': ' + errMsg : ''}`;
   const r = document.createElement('div');
-  r.className = 'prow '+(ok?'ok':'err');
-  r.innerHTML = `<span class="dot"></span><span>${ticker}</span><span style="margin-left:auto">${ok?'ok':(errMsg||'error')}</span>`;
+  r.className = 'prow ' + (ok ? 'ok' : 'err');
+  r.innerHTML = `<span class="dot"></span><span>${ticker}</span><span style="margin-left:auto">${ok ? 'ok' : (errMsg || 'error')}</span>`;
   const rows = document.getElementById('progRows');
   rows.appendChild(r);
   rows.scrollTop = rows.scrollHeight;
@@ -355,28 +385,28 @@ function progDone(n, f) {
 function validateCsv(text) {
   const lines = text.trim().split('\n');
   if (lines.length < 2) return 'CSV has no data rows.';
-  const hdrs = lines[0].split(',').map(h=>h.trim().toLowerCase());
-  const miss = ['ticker','weight','price'].filter(c=>!hdrs.includes(c));
-  return miss.length ? `CSV missing required column${miss.length>1?'s':''}: ${miss.join(', ')}.` : null;
+  const hdrs = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const miss = ['ticker', 'weight', 'price'].filter(c => !hdrs.includes(c));
+  return miss.length ? `CSV missing required column${miss.length > 1 ? 's' : ''}: ${miss.join(', ')}.` : null;
 }
 
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 function renderPortKpis(holdings) {
-  let wSum=0, retWSum=0, best=null, worst=null;
-  const priced = holdings.filter(h=>h.start_price!=null);
+  let wSum = 0, retWSum = 0, best = null, worst = null;
+  const priced = holdings.filter(h => h.start_price != null);
   holdings.forEach(h => {
     const r = calcRet(h.start_price, h.price);
-    if (r==null) return;
-    if (!best  || r>best.ret)  best  = {ticker:h.ticker, ret:r};
-    if (!worst || r<worst.ret) worst = {ticker:h.ticker, ret:r};
-    if (h.weight!=null) { retWSum += r*h.weight; wSum += +h.weight; }
+    if (r == null) return;
+    if (!best  || r > best.ret)  best  = { ticker: h.ticker, ret: r };
+    if (!worst || r < worst.ret) worst = { ticker: h.ticker, ret: r };
+    if (h.weight != null) { retWSum += r * h.weight; wSum += +h.weight; }
   });
-  const wr = wSum>0 ? retWSum/wSum : null;
+  const wr = wSum > 0 ? retWSum / wSum : null;
   _portRet = wr;
 
   const portEl = document.getElementById('kvPortRet');
-  portEl.textContent = wr!=null ? fmtPct(wr) : '—';
-  portEl.className = 'kpi-val '+(wr==null?'neu':wr>=0?'up':'down');
+  portEl.textContent = wr != null ? fmtPct(wr) : '—';
+  portEl.className   = 'kpi-val ' + (wr == null ? 'neu' : wr >= 0 ? 'up' : 'down');
   document.getElementById('ksSince').textContent = `Since ${document.getElementById('startDate').value}`;
 
   document.getElementById('kvPos').textContent = holdings.length;
@@ -393,54 +423,136 @@ function renderSpxKpi(data) {
   _spxRet = data.return;
   const spxEl = document.getElementById('kvSpx');
   spxEl.textContent = fmtPct(data.return);
-  spxEl.className   = 'kpi-val '+(data.return>=0?'up':'down');
+  spxEl.className   = 'kpi-val ' + (data.return >= 0 ? 'up' : 'down');
   document.getElementById('ksSpx').textContent = `Benchmark since ${data.start_date}`;
-  document.getElementById('kpiStrip').style.display = 'grid';
   calcAlpha();
 }
 
 function calcAlpha() {
-  if (_portRet==null || _spxRet==null) return;
-  const a = _portRet - _spxRet;
+  if (_portRet == null || _spxRet == null) return;
+  const a  = _portRet - _spxRet;
   const el = document.getElementById('kvAlpha');
   el.textContent = fmtPct(a);
-  el.className   = 'kpi-val '+(a>=0?'up':'down');
+  el.className   = 'kpi-val ' + (a >= 0 ? 'up' : 'down');
 }
 
 // ── failed tickers ────────────────────────────────────────────────────────────
 function renderFailed(errors) {
   const sec = document.getElementById('failedSec');
   if (!errors.length) { sec.classList.remove('show'); return; }
-  document.getElementById('failedTtl').textContent = `${errors.length} failed ticker${errors.length>1?'s':''}`;
-  document.getElementById('failedList').innerHTML = errors.map(e=>`
+  document.getElementById('failedTtl').textContent = `${errors.length} failed ticker${errors.length > 1 ? 's' : ''}`;
+  document.getElementById('failedList').innerHTML = errors.map(e => `
     <div class="failed-row">
       <span class="failed-ticker">${e.ticker}</span>
-      <span class="failed-reason">${e.error||'Unknown error'}</span>
+      <span class="failed-reason">${e.error || 'Unknown error'}</span>
     </div>`).join('');
   sec.classList.add('show');
 }
 
-// ── table row ─────────────────────────────────────────────────────────────────
-let _rowCount = 0;
-function addRow(h) {
-  if (_rowCount === 0) document.getElementById('tblBody').innerHTML = '';
-  _rowCount++;
-  const up   = h.change >= 0;
-  const wPct = h.weight!=null ? `${(+h.weight*100).toFixed(2)}%` : '—';
-  const spx  = h.start_price!=null ? `${h.currency} ${(+h.start_price).toFixed(2)}` : '—';
+// ── table ─────────────────────────────────────────────────────────────────────
+function holdingToRow(h) {
   const ret  = calcRet(h.start_price, h.price);
-  const wret = (ret!=null && h.weight!=null) ? ret * +h.weight : null;
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><span class="ticker-badge">${h.ticker}</span></td>
-    <td>${h.name||'—'}</td>
-    <td class="r">${wPct}</td>
-    <td class="r">${spx}</td>
-    <td class="r">${h.currency} ${(+h.price).toFixed(2)}</td>
-    <td class="r">${pill(ret)}</td>
-    <td class="r">${pill(wret)}</td>
-    <td class="r ${up?'up':'down'}">${up?'+':''}${(+h.change).toFixed(2)} (${up?'+':''}${(+h.change_pct).toFixed(2)}%)</td>`;
-  document.getElementById('tblBody').appendChild(tr);
+  const wret = (ret != null && h.weight != null) ? ret * +h.weight : null;
+  return { ...h, _ret: ret, _wret: wret };
+}
+
+function renderTable(holdings) {
+  _allHoldings = holdings.map(holdingToRow);
+  applyTableView();
+}
+
+function applyTableView() {
+  const query = (document.getElementById('tblSearch').value || '').toLowerCase();
+  let rows = _allHoldings.filter(h =>
+    !query ||
+    (h.ticker || '').toLowerCase().includes(query) ||
+    (h.name   || '').toLowerCase().includes(query)
+  );
+
+  if (_sortCol) {
+    rows = [...rows].sort((a, b) => {
+      let av = sortVal(a, _sortCol), bv = sortVal(b, _sortCol);
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      if (typeof av === 'string') return _sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+      return _sortDir === 'asc' ? av - bv : bv - av;
+    });
+  }
+
+  const tbody = document.getElementById('tblBody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="color:var(--muted);padding:22px 16px">No holdings match your filter.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(h => {
+    const up   = h.change >= 0;
+    const wPct = h.weight != null ? `${(+h.weight * 100).toFixed(2)}%` : '—';
+    const spx  = h.start_price != null ? `${h.currency} ${(+h.start_price).toFixed(2)}` : '—';
+    return `<tr>
+      <td><span class="ticker-badge">${h.ticker}</span></td>
+      <td>${h.name || '—'}</td>
+      <td class="r">${wPct}</td>
+      <td class="r">${spx}</td>
+      <td class="r">${h.currency} ${(+h.price).toFixed(2)}</td>
+      <td class="r">${pill(h._ret)}</td>
+      <td class="r">${pill(h._wret)}</td>
+      <td class="r ${up ? 'up' : 'down'}">${up ? '+' : ''}${(+h.change).toFixed(2)} (${up ? '+' : ''}${(+h.change_pct).toFixed(2)}%)</td>
+    </tr>`;
+  }).join('');
+}
+
+function sortVal(h, col) {
+  switch (col) {
+    case 'ticker':     return h.ticker;
+    case 'name':       return h.name || '';
+    case 'weight':     return h.weight != null ? +h.weight : null;
+    case 'start_price':return h.start_price != null ? +h.start_price : null;
+    case 'price':      return +h.price;
+    case 'ret':        return h._ret;
+    case 'wret':       return h._wret;
+    case 'change_pct': return +h.change_pct;
+    default: return null;
+  }
+}
+
+// sortable headers
+document.querySelectorAll('th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (_sortCol === col) {
+      _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      _sortCol = col; _sortDir = 'asc';
+    }
+    document.querySelectorAll('th.sortable').forEach(t => t.classList.remove('asc', 'desc'));
+    th.classList.add(_sortDir);
+    applyTableView();
+  });
+});
+
+// live search
+document.getElementById('tblSearch').addEventListener('input', applyTableView);
+
+// ── export CSV ────────────────────────────────────────────────────────────────
+function exportCsv() {
+  if (!_allHoldings.length) return;
+  const cols = ['ticker', 'name', 'weight', 'start_price', 'price', 'currency', 'change', 'change_pct', '_ret', '_wret'];
+  const labels = ['Ticker', 'Name', 'Weight', 'Start Price', 'Current Price', 'Currency', 'Day Change', 'Day Change %', 'Return %', 'Weighted Return %'];
+  const rows = [labels.join(',')];
+  _allHoldings.forEach(h => {
+    rows.push(cols.map(c => {
+      const v = h[c];
+      if (v == null) return '';
+      const s = String(v);
+      return s.includes(',') ? `"${s}"` : s;
+    }).join(','));
+  });
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `portfolio_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
 }
 
 // ── benchmark ─────────────────────────────────────────────────────────────────
@@ -450,11 +562,18 @@ async function loadBenchmark(startDate) {
     const d = await r.json();
     if (d.error) { console.warn('SPX:', d.error); return; }
     renderSpxKpi(d);
-  } catch(e) { console.warn('SPX fetch failed:', e); }
+  } catch (e) { console.warn('SPX fetch failed:', e); }
 }
 
 // ── main load ─────────────────────────────────────────────────────────────────
 async function loadPortfolio() {
+  const file = document.getElementById('fileInput').files[0];
+  if (!file) { showErr('Choose a CSV file first.'); return; }
+
+  const text = await file.text();
+  const verr = validateCsv(text);
+  if (verr) { showErr(verr); return; }
+
   const startDate = document.getElementById('startDate').value;
   if (!startDate) { showErr('Please choose a start date.'); return; }
 
@@ -463,20 +582,23 @@ async function loadPortfolio() {
   btn.disabled = true; btn.textContent = 'Loading…';
   document.getElementById('refreshBtn').disabled = true;
   document.getElementById('refreshIcon').classList.add('spinning');
-  document.getElementById('progCard').classList.remove('idle');
-  document.getElementById('progFill').style.width = '0%';
-  document.getElementById('progPct').textContent = '';
-  document.getElementById('progLabel').textContent = 'Fetching prices…';
-  document.getElementById('progSub').textContent = '';
-  document.getElementById('progRows').innerHTML = '';
 
-  _rowCount = 0; _portRet = null; _spxRet = null;
+  const totalRows = text.trim().split('\n').filter((_, i) => i > 0 && _.trim()).length;
+  progStart(totalRows);
+  _portRet = null; _spxRet = null; _allHoldings = [];
   document.getElementById('tblBody').innerHTML = '<tr><td colspan="8" style="color:var(--muted);padding:22px 16px">Loading…</td></tr>';
+  document.getElementById('kpiStrip').style.display = 'none';
   document.getElementById('failedSec').classList.remove('show');
+  document.getElementById('exportBtn').style.display = 'none';
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  let streamHoldings = [];
 
   try {
-    const res = await fetch(`${API}/api/portfolio/auto?startdate=${startDate}`);
-    if (!res.ok) { const j=await res.json().catch(()=>({})); showErr(j.error||`Server error ${res.status}`); return; }
+    const res = await fetch(`${API}/api/portfolio/stream`, { method: 'POST', body: fd });
+    if (!res.ok) { const j = await res.json().catch(() => ({})); showErr(j.error || `Server error ${res.status}`); return; }
 
     const reader  = res.body.getReader();
     const decoder = new TextDecoder();
@@ -488,41 +610,43 @@ async function loadPortfolio() {
       buf += decoder.decode(value, { stream: true });
       const parts = buf.split('\n\n');
       buf = parts.pop();
+
       for (const part of parts) {
         const line = part.replace(/^data: /, '').trim();
         if (!line) continue;
         let msg; try { msg = JSON.parse(line); } catch { continue; }
 
-        if (msg.type === 'error') { showErr(msg.message); break; }
+        if (msg.type === 'error')    { showErr(msg.message); break; }
         if (msg.type === 'progress') {
           progTick(msg.done, msg.total, msg.ticker, msg.status === 'ok', msg.error);
-          if (msg.status === 'ok') addRow(msg.holding);
+          if (msg.status === 'ok') streamHoldings.push(msg.holding);
         }
         if (msg.type === 'done') {
           progDone(msg.holdings.length, msg.errors.length);
-          document.getElementById('tblMeta').textContent = `${msg.holdings.length} holdings loaded`;
+          document.getElementById('tblMeta').textContent = `${msg.holdings.length} holdings`;
+          renderTable(msg.holdings);
           renderPortKpis(msg.holdings);
           renderFailed(msg.errors);
+          document.getElementById('exportBtn').style.display = '';
           loadBenchmark(startDate);
           loadCharts(msg.holdings, startDate);
           document.getElementById('refreshBtn').disabled = false;
         }
       }
     }
-  } catch(e) {
-    showErr('Could not connect to backend.');
+  } catch (e) {
+    showErr('Could not connect to backend. Make sure app.py is running on port 5000.');
   } finally {
-    btn.disabled=false; btn.textContent='Refresh prices';
+    btn.disabled = false; btn.textContent = 'Load portfolio';
     document.getElementById('refreshIcon').classList.remove('spinning');
   }
 }
 
-
-// ── mini charts ──────────────────────────────────────────────────────────────
-const _miniCharts  = {};   // canvasId → Chart instance
-const _cardData    = {};   // cardId   → { allDates, allValues, allRawValues, startPrice, rebalanceDate, currency, price }
-const _cardPeriod  = {};   // cardId   → active period key
-const _fundCache   = {};   // ticker   → fundamentals object
+// ── mini charts ───────────────────────────────────────────────────────────────
+const _miniCharts = {};
+const _cardData   = {};
+const _cardPeriod = {};
+const _fundCache  = {};
 
 function round2(v) { return Math.round(v * 100) / 100; }
 
@@ -544,12 +668,12 @@ function slicePeriod(dates, values, period, rebalanceDate) {
     const s   = idx >= 0 ? idx : 0;
     return { dates: dates.slice(s), values: values.slice(s) };
   }
-  const days = period === '1D' ? 1 : period === '1W' ? 7 : 30;
+  const days   = period === '1D' ? 1 : period === '1W' ? 7 : 30;
   const cutoff = new Date(dates.at(-1));
   cutoff.setDate(cutoff.getDate() - days);
-  const cutStr = cutoff.toISOString().slice(0,10);
-  const idx = dates.findIndex(d => d >= cutStr);
-  const s   = idx >= 0 ? idx : 0;
+  const cutStr = cutoff.toISOString().slice(0, 10);
+  const idx    = dates.findIndex(d => d >= cutStr);
+  const s      = idx >= 0 ? idx : 0;
   return { dates: dates.slice(s), values: values.slice(s) };
 }
 
@@ -558,7 +682,7 @@ function makeMiniChart(canvasId, dates, normValues, colour, currency, rawValues)
   if (!el) return;
   if (_miniCharts[canvasId]) { _miniCharts[canvasId].destroy(); }
   const ctx = el.getContext('2d');
-  const g = ctx.createLinearGradient(0, 0, 0, 100);
+  const g   = ctx.createLinearGradient(0, 0, 0, 100);
   g.addColorStop(0, colour + '44'); g.addColorStop(1, colour + '00');
   _miniCharts[canvasId] = new Chart(ctx, {
     type: 'line',
@@ -578,7 +702,7 @@ function makeMiniChart(canvasId, dates, normValues, colour, currency, rawValues)
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: 'var(--surface)', titleColor: cv('--muted'),
+          backgroundColor: cv('--surface'), titleColor: cv('--muted'),
           bodyColor: cv('--text'), borderColor: cv('--border'), borderWidth: 1, padding: 9,
           callbacks: {
             title: ctx => ctx[0].label,
@@ -586,7 +710,7 @@ function makeMiniChart(canvasId, dates, normValues, colour, currency, rawValues)
               const pct = ctx.parsed.y;
               const raw = rawValues ? rawValues[ctx.dataIndex] : null;
               const pStr = pct != null ? ` ${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%` : '';
-              const rStr = raw   != null ? `  ${currency || ''} ${raw.toFixed(2)}` : '';
+              const rStr = raw  != null ? `  ${currency || ''} ${raw.toFixed(2)}` : '';
               return pStr + rStr;
             }
           }
@@ -602,28 +726,24 @@ function refreshCard(cardId, period) {
   if (!d) return;
   _cardPeriod[cardId] = period;
 
-  // slice raw values, then normalise from first point in slice
   const { dates, values: rawSlice } = slicePeriod(d.allDates, d.allRawValues, period, d.rebalanceDate);
   let normSlice;
   if (d.isNorm) {
-    // portfolio — already indexed to 100
     const portSlice = slicePeriod(d.allDates, d.allValues, period, d.rebalanceDate).values;
     normSlice = portSlice.map(v => v != null ? round2(v - 100) : null);
   } else {
-    normSlice = normaliseSeries(rawSlice, null); // normalise from first point in slice
+    normSlice = normaliseSeries(rawSlice, null);
   }
 
   const lastVal = normSlice.filter(v => v != null).at(-1);
   const colour  = colourForReturn(lastVal);
   const retStr  = lastVal != null ? `${lastVal >= 0 ? '+' : ''}${lastVal.toFixed(2)}%` : '—';
 
-  // update return display
   const retEl = document.getElementById(`${cardId}-ret`);
   if (retEl) { retEl.textContent = retStr; retEl.style.color = colour; }
 
   makeMiniChart(`canvas-${cardId}`, dates, normSlice, colour, d.currency, rawSlice);
 
-  // update active button
   document.querySelectorAll(`#${cardId} .mc-per-btn`).forEach(b => {
     b.classList.toggle('active', b.dataset.period === period);
   });
@@ -640,17 +760,16 @@ async function fetchFundamentals(ticker) {
 }
 
 function renderFundamentals(cardId, funds) {
-  const fmt = (v, suffix='') => v != null ? `${v}${suffix}` : '—';
   const fmtLarge = v => {
     if (v == null) return '—';
-    if (v >= 1e12) return (v/1e12).toFixed(1)+'T';
-    if (v >= 1e9)  return (v/1e9).toFixed(1)+'B';
-    if (v >= 1e6)  return (v/1e6).toFixed(1)+'M';
+    if (v >= 1e12) return (v / 1e12).toFixed(1) + 'T';
+    if (v >= 1e9)  return (v / 1e9).toFixed(1)  + 'B';
+    if (v >= 1e6)  return (v / 1e6).toFixed(1)  + 'M';
     return v.toLocaleString();
   };
   const cells = [
-    { lbl: 'P/E',     val: fmt(funds.pe != null ? funds.pe.toFixed(1) : null) },
-    { lbl: 'Beta',    val: fmt(funds.beta != null ? funds.beta.toFixed(2) : null) },
+    { lbl: 'P/E',     val: funds.pe   != null ? funds.pe.toFixed(1)   : '—' },
+    { lbl: 'Beta',    val: funds.beta != null ? funds.beta.toFixed(2) : '—' },
     { lbl: 'Volume',  val: fmtLarge(funds.volume) },
     { lbl: 'Mkt Cap', val: fmtLarge(funds.mktCap) },
   ];
@@ -665,9 +784,7 @@ function renderFundamentals(cardId, funds) {
 function buildCard(item, rebalanceDate) {
   const cardId   = item.id;
   const canvasId = `canvas-${cardId}`;
-  const isPortOrSpx = item.ticker === 'PORTFOLIO' || item.ticker === 'SPX';
 
-  // normalise full series
   let normVals;
   if (item.isNorm) {
     normVals = item.values.map(v => v != null ? round2(v - 100) : null);
@@ -681,7 +798,6 @@ function buildCard(item, rebalanceDate) {
   const priceStr = item.price != null ? `${item.currency || ''} ${(+item.price).toFixed(2)}` : '—';
   const wtStr    = item.weight != null ? `${(item.weight * 100).toFixed(2)}%` : '';
 
-  // store for period switching
   _cardData[cardId] = {
     allDates: item.dates, allValues: normVals, allRawValues: item.values,
     startPrice: item.startPrice, rebalanceDate, currency: item.currency,
@@ -723,7 +839,7 @@ function buildCard(item, rebalanceDate) {
 function renderChartGrid(data, holdings, rebalanceDate) {
   const grid = document.getElementById('chartGrid');
   grid.innerHTML = '';
-  Object.keys(_miniCharts).forEach(k => { try { _miniCharts[k].destroy(); } catch{} });
+  Object.keys(_miniCharts).forEach(k => { try { _miniCharts[k].destroy(); } catch {} });
   Object.keys(_cardData).forEach(k => delete _cardData[k]);
 
   document.getElementById('chartsSection').style.display = 'block';
@@ -732,7 +848,7 @@ function renderChartGrid(data, holdings, rebalanceDate) {
     { id: 'chart-port', ticker: 'PORTFOLIO', name: 'Weighted portfolio', weight: null,
       dates: data.portfolio.dates, values: data.portfolio.values,
       price: null, currency: '', startPrice: 100, isNorm: true },
-    { id: 'chart-spx',  ticker: 'SPX', name: 'S&P 500', weight: null,
+    { id: 'chart-spx', ticker: 'SPX', name: 'S&P 500', weight: null,
       dates: data.benchmark.dates, values: data.benchmark.values,
       price: data.benchmark.values?.at(-1), currency: 'USD', startPrice: null, isNorm: false },
   ];
@@ -753,9 +869,7 @@ function renderChartGrid(data, holdings, rebalanceDate) {
   items.forEach(item => {
     const card = buildCard(item, rebalanceDate);
     grid.appendChild(card);
-    // draw with REBALANCE period (full series from start date) by default
     setTimeout(() => refreshCard(item.id, 'REBALANCE'), 0);
-    // fetch fundamentals async for holding cards
     if (item.ticker !== 'PORTFOLIO' && item.ticker !== 'SPX') {
       fetchFundamentals(item.ticker).then(f => renderFundamentals(item.id, f));
     }
@@ -778,13 +892,48 @@ async function loadCharts(holdings, startDate) {
     const data = await res.json();
     if (data.error) { console.warn('Charts:', data.error); return; }
     renderChartGrid(data, holdings, startDate);
-  } catch(e) { console.warn('Charts fetch failed:', e); }
+  } catch (e) { console.warn('Charts fetch failed:', e); }
 }
 
+// ── auto-load default portfolio ───────────────────────────────────────────────
+async function loadDefaultPortfolio() {
+  const statusEl = document.getElementById('defaultStatus');
+  try {
+    const res = await fetch(`${API}/api/default-portfolio`);
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      if (statusEl) statusEl.textContent = j.error || 'No default portfolio found.';
+      return;
+    }
+    const csvText = await res.text();
+    const verr = validateCsv(csvText);
+    if (verr) { if (statusEl) statusEl.textContent = verr; return; }
+
+    // Synthesise a File object so loadPortfolio() can consume it normally
+    const file = new File([csvText], 'portfolio.csv', { type: 'text/csv' });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('fileInput').files = dt.files;
+    document.getElementById('fileLabelTxt').textContent = 'portfolio.csv (default)';
+    if (statusEl) statusEl.textContent = 'Default portfolio loaded ✓';
+    statusEl.style.color = 'var(--success)';
+
+    await loadPortfolio();
+  } catch (e) {
+    if (statusEl) { statusEl.textContent = 'Could not reach backend.'; statusEl.style.color = 'var(--danger)'; }
+  }
+}
 
 // ── wiring ─────────────────────────────────────────────────────────────────────
+document.getElementById('fileInput').addEventListener('change', e => {
+  const f = e.target.files[0];
+  document.getElementById('fileLabelTxt').textContent = f ? f.name : 'Choose CSV file…';
+});
 document.getElementById('loadBtn').addEventListener('click', loadPortfolio);
 document.getElementById('refreshBtn').addEventListener('click', loadPortfolio);
+
+// Auto-load default portfolio on page open
+loadDefaultPortfolio();
 </script>
 </body>
 </html>
