@@ -442,29 +442,60 @@ def get_fundamentals(ticker):
 
 @app.route("/api/portfolio/auto")
 def portfolio_auto():
-    startdate = request.args.get("startdate", "")
-    if not startdate:
-        return jsonify({"error": "startdate is required"}), 400
     try:
         with open("portfolio.csv", "r") as f:
             raw = f.read()
-        seen, err = parse_csv(raw)
-        if err:
-            return jsonify({"error": err}), 400
-        results, errors = [], []
+    except FileNotFoundError:
+        def not_found():
+            yield f"data: {json.dumps({'type':'error','message':'portfolio.csv not found in repository'})}
+
+"
+        return Response(stream_with_context(not_found()), mimetype="text/event-stream")
+
+    seen, err = parse_csv(raw)
+    if err:
+        def error_stream():
+            yield f"data: {json.dumps({'type':'error','message':err})}
+
+"
+        return Response(stream_with_context(error_stream()), mimetype="text/event-stream")
+
+    total = len(seen)
+
+    def generate():
+        holdings, errors = [], []
+        idx = 0
         for ticker, meta in seen.items():
+            idx += 1
             try:
                 data, fetch_err = fetch_ticker_data(ticker)
                 if fetch_err:
                     errors.append({"ticker": ticker, "error": fetch_err})
+                    yield f"data: {json.dumps({'type':'progress','done':idx,'total':total,'ticker':ticker,'status':'error','error':fetch_err})}
+
+"
                     continue
-                results.append(enrich(data, meta))
+                data = enrich(data, meta)
+                holdings.append(data)
+                yield f"data: {json.dumps({'type':'progress','done':idx,'total':total,'ticker':ticker,'status':'ok','holding':data})}
+
+"
             except Exception as e:
-                errors.append({"ticker": ticker, "error": str(e)})
+                msg = str(e)
+                errors.append({"ticker": ticker, "error": msg})
+                yield f"data: {json.dumps({'type':'progress','done':idx,'total':total,'ticker':ticker,'status':'error','error':msg})}
+
+"
             time.sleep(0.15)
-        return jsonify({"holdings": results, "errors": errors})
-    except FileNotFoundError:
-        return jsonify({"error": "portfolio.csv not found in repository"}), 404
+        yield f"data: {json.dumps({'type':'done','holdings':holdings,'errors':errors})}
+
+"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
 
 
 if __name__ == "__main__":
