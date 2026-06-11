@@ -59,7 +59,7 @@
     .date-row label { font-size: 13px; color: var(--muted); white-space: nowrap; }
     .date-input { padding: 8px 11px; border-radius: 9px; border: 1px solid var(--border); background: var(--surf2); color: var(--text); font-size: 13px; outline: none; color-scheme: dark light; }
     .date-input:focus { border-color: var(--primary); }
-.btn { height: 40px; padding: 0 20px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; transition: opacity .15s; white-space: nowrap; }
+    .btn { height: 40px; padding: 0 20px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; transition: opacity .15s; white-space: nowrap; }
     .btn:hover:not(:disabled) { opacity: .82; }
     .btn:disabled { opacity: .4; cursor: not-allowed; }
     .btn-refresh { width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; background: var(--surf2); color: var(--text); border: 1px solid var(--border); flex-shrink: 0; }
@@ -193,12 +193,20 @@
         <label for="startDate">Start date</label>
         <input type="date" id="startDate" class="date-input" value="2026-04-10" />
       </div>
+        <button class="btn" id="loadBtn">Refresh prices</button>
+        <button class="btn btn-refresh" id="refreshBtn" title="Refresh prices" disabled>
+          <svg id="refreshIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+        </button>
       </div>
+    </div>
 
     <div class="card prog-card idle" id="progCard">
       <div class="prog-body">
         <div class="prog-top">
-          <span class="prog-label" id="progLabel">Waiting for upload…</span>
+          <span class="prog-label" id="progLabel">Click Refresh prices to load…</span>
           <span class="prog-pct"  id="progPct"></span>
         </div>
         <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
@@ -270,7 +278,7 @@
           </tr>
         </thead>
         <tbody id="tblBody">
-          <tr><td colspan="8" style="color:var(--muted);padding:22px 16px">Upload a CSV to see holdings here.</td></tr>
+          <tr><td colspan="8" style="color:var(--muted);padding:22px 16px">Click Refresh prices to load holdings.</td></tr>
         </tbody>
       </table>
     </div>
@@ -446,37 +454,45 @@ async function loadBenchmark(startDate) {
 async function loadPortfolio() {
   const startDate = document.getElementById('startDate').value;
   if (!startDate) { showErr('Please choose a start date.'); return; }
+
   clearErr();
   const btn = document.getElementById('loadBtn');
   btn.disabled = true; btn.textContent = 'Loading…';
   document.getElementById('refreshBtn').disabled = true;
   document.getElementById('refreshIcon').classList.add('spinning');
-  rowCount = 0; portRet = null; spxRet = null;
+  document.getElementById('progCard').classList.remove('idle');
+  document.getElementById('progFill').style.width = '0%';
+  document.getElementById('progPct').textContent = '';
+  document.getElementById('progLabel').textContent = 'Fetching prices…';
+  document.getElementById('progSub').textContent = '';
+  document.getElementById('progRows').innerHTML = '';
+
+  _rowCount = 0; _portRet = null; _spxRet = null;
   document.getElementById('tblBody').innerHTML = '<tr><td colspan="8" style="color:var(--muted);padding:22px 16px">Loading…</td></tr>';
   document.getElementById('kpiStrip').style.display = 'none';
   document.getElementById('failedSec').classList.remove('show');
+
   try {
     const res = await fetch(`${API}/api/portfolio/auto?startdate=${startDate}`);
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      showErr(j.error || `Server error ${res.status}`); return;
-    }
+    if (!res.ok) { const j=await res.json().catch(()=>({})); showErr(j.error||`Server error ${res.status}`); return; }
     const data = await res.json();
     if (data.error) { showErr(data.error); return; }
+
     document.getElementById('tblBody').innerHTML = '';
     data.holdings.forEach(h => addRow(h));
     document.getElementById('tblMeta').textContent = `${data.holdings.length} holdings loaded`;
+    document.getElementById('progLabel').textContent = `Done — ${data.holdings.length} priced`;
+    document.getElementById('progFill').style.width = '100%';
     renderPortKpis(data.holdings);
     renderFailed(data.errors);
-    loadCharts(data.holdings, startDate);
     loadBenchmark(startDate);
+    loadCharts(data.holdings, startDate);
     document.getElementById('refreshBtn').disabled = false;
   } catch(e) {
     showErr('Could not connect to backend.');
   } finally {
-    btn.disabled = false; btn.textContent = 'Load portfolio';
-    const ri = document.getElementById('refreshIcon');
-    ri.classList.remove('spinning');
+    btn.disabled=false; btn.textContent='Refresh prices';
+    document.getElementById('refreshIcon').classList.remove('spinning');
   }
 }
 
