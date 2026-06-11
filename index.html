@@ -57,6 +57,8 @@
     .hint code { background: var(--surf2); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
     .date-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
     .date-row label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+    .btn-row { display: flex; gap: 9px; align-items: center; margin-top: 14px; }
+    .btn-row .btn { flex: 1; }
     .date-input { padding: 8px 11px; border-radius: 9px; border: 1px solid var(--border); background: var(--surf2); color: var(--text); font-size: 13px; outline: none; color-scheme: dark light; }
     .date-input:focus { border-color: var(--primary); }
     .btn { height: 40px; padding: 0 20px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; transition: opacity .15s; white-space: nowrap; }
@@ -193,6 +195,7 @@
         <label for="startDate">Start date</label>
         <input type="date" id="startDate" class="date-input" value="2026-04-10" />
       </div>
+      <div class="btn-row">
         <button class="btn" id="loadBtn">Refresh prices</button>
         <button class="btn btn-refresh" id="refreshBtn" title="Refresh prices" disabled>
           <svg id="refreshIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -217,7 +220,7 @@
   </div>
 
   <!-- KPI strip -->
-  <div class="kpi-strip" id="kpiStrip" style="display:none">
+  <div class="kpi-strip" id="kpiStrip">
     <div class="kpi-cell">
       <div class="kpi-lbl">Portfolio return</div>
       <div class="kpi-val" id="kvPortRet">—</div>
@@ -252,7 +255,7 @@
 
 
   <!-- Charts grid -->
-  <div class="charts-section" id="chartsSection" style="display:none">
+  <div class="charts-section" id="chartsSection">
     <div class="charts-section-title">Performance since start date</div>
     <div class="chart-grid" id="chartGrid"></div>
   </div>
@@ -469,7 +472,6 @@ async function loadPortfolio() {
 
   _rowCount = 0; _portRet = null; _spxRet = null;
   document.getElementById('tblBody').innerHTML = '<tr><td colspan="8" style="color:var(--muted);padding:22px 16px">Loading…</td></tr>';
-  document.getElementById('kpiStrip').style.display = 'none';
   document.getElementById('failedSec').classList.remove('show');
 
   try {
