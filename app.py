@@ -6,9 +6,11 @@ import csv, io, json, time
 app = Flask(__name__)
 CORS(app)
 
+
 @app.route('/')
 def serve_index():
     return send_file('index.html')
+
 
 # ── helpers ────────────────────────────────────────────────────────────────────
 
