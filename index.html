@@ -477,19 +477,38 @@ async function loadPortfolio() {
   try {
     const res = await fetch(`${API}/api/portfolio/auto?startdate=${startDate}`);
     if (!res.ok) { const j=await res.json().catch(()=>({})); showErr(j.error||`Server error ${res.status}`); return; }
-    const data = await res.json();
-    if (data.error) { showErr(data.error); return; }
 
-    document.getElementById('tblBody').innerHTML = '';
-    data.holdings.forEach(h => addRow(h));
-    document.getElementById('tblMeta').textContent = `${data.holdings.length} holdings loaded`;
-    document.getElementById('progLabel').textContent = `Done — ${data.holdings.length} priced`;
-    document.getElementById('progFill').style.width = '100%';
-    renderPortKpis(data.holdings);
-    renderFailed(data.errors);
-    loadBenchmark(startDate);
-    loadCharts(data.holdings, startDate);
-    document.getElementById('refreshBtn').disabled = false;
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop();
+      for (const part of parts) {
+        const line = part.replace(/^data: /, '').trim();
+        if (!line) continue;
+        let msg; try { msg = JSON.parse(line); } catch { continue; }
+
+        if (msg.type === 'error') { showErr(msg.message); break; }
+        if (msg.type === 'progress') {
+          progTick(msg.done, msg.total, msg.ticker, msg.status === 'ok', msg.error);
+          if (msg.status === 'ok') addRow(msg.holding);
+        }
+        if (msg.type === 'done') {
+          progDone(msg.holdings.length, msg.errors.length);
+          document.getElementById('tblMeta').textContent = `${msg.holdings.length} holdings loaded`;
+          renderPortKpis(msg.holdings);
+          renderFailed(msg.errors);
+          loadBenchmark(startDate);
+          loadCharts(msg.holdings, startDate);
+          document.getElementById('refreshBtn').disabled = false;
+        }
+      }
+    }
   } catch(e) {
     showErr('Could not connect to backend.');
   } finally {
