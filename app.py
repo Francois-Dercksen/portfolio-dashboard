@@ -443,6 +443,7 @@ def portfolio_auto():
     except FileNotFoundError:
         return jsonify({"error": "portfolio.csv not found in repository"}), 404
 
+
 if __name__ == "__main__":
     import os
     port = int(os.environ.get('PORT', 5000))
