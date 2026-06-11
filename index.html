@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+  <style>
+    :root, [data-theme="light"] {
+      --bg:      #f0efe9;
+      --surface: #fafaf7;
+      --surf2:   #f0ede8;
+      --border:  rgba(0,0,0,0.09);
+      --text:    #1a1d27;
+      --muted:   #6b7280;
+      --faint:   #c9cdd5;
+      --primary: #01696f;
+      --success: #437a22;
+      --danger:  #a13544;
+      --gold:    #8a6200;
+    }
+    [data-theme="dark"] {
+      --bg:      #111110;
+      --surface: #1a1918;
+      --surf2:   #222120;
+      --border:  rgba(255,255,255,0.07);
+      --text:    #d4d3d0;
+      --muted:   #7a7976;
+      --faint:   #3a3937;
+      --primary: #4f98a3;
+      --success: #6daa45;
+      --danger:  #dd6974;
+      --gold:    #e8af34;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-font-smoothing: antialiased; }
+    body { font-family: 'Satoshi','Inter',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 28px 20px 80px; }
+    button, input { font: inherit; cursor: pointer; }
+
+    .wrap { max-width: 1280px; margin: 0 auto; }
+
+    /* ── header ── */
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+    .logo { display: flex; align-items: center; gap: 9px; font-size: 18px; font-weight: 700; }
+    .logo svg { color: var(--primary); }
+    .theme-btn { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); display: flex; align-items: center; justify-content: center; transition: background .15s; }
+    .theme-btn:hover { background: var(--surf2); }
+
+    /* ── control row ── */
+    .ctrl-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; }
+
+    .upload-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .hint { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+    .hint code { background: var(--surf2); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    .date-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .date-row label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+    .date-input { padding: 8px 11px; border-radius: 9px; border: 1px solid var(--border); background: var(--surf2); color: var(--text); font-size: 13px; outline: none; color-scheme: dark light; }
+    .date-input:focus { border-color: var(--primary); }
+    .file-row { display: flex; gap: 9px; align-items: center; }
+    .file-label { flex: 1; min-height: 40px; padding: 9px 12px; border-radius: 10px; border: 1px dashed var(--border); background: var(--surf2); color: var(--muted); display: flex; align-items: center; gap: 7px; font-size: 13px; overflow: hidden; white-space: nowrap; cursor: pointer; transition: border-color .15s, color .15s; }
+    .file-label:hover { border-color: var(--primary); color: var(--text); }
+    #fileInput { display: none; }
+    .btn { height: 40px; padding: 0 20px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; transition: opacity .15s; white-space: nowrap; }
+    .btn:hover:not(:disabled) { opacity: .82; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-refresh { width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; background: var(--surf2); color: var(--text); border: 1px solid var(--border); flex-shrink: 0; }
+    .btn-refresh:hover:not(:disabled) { background: var(--primary); color: #fff; opacity: 1; }
+    .btn-refresh:disabled { opacity: .3; cursor: not-allowed; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinning { animation: spin .7s linear infinite; }
+
+    /* progress card */
+    .prog-card { display: flex; flex-direction: column; justify-content: center; }
+    .prog-card.idle .prog-body { opacity: .35; pointer-events: none; }
+    .prog-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 10px; }
+    .prog-label { font-weight: 600; }
+    .prog-pct { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .prog-track { height: 7px; background: var(--surf2); border-radius: 99px; overflow: hidden; }
+    .prog-fill { height: 100%; background: var(--primary); border-radius: 99px; width: 0%; transition: width .3s ease; }
+    .prog-sub { margin-top: 8px; font-size: 12px; color: var(--muted); min-height: 16px; }
+    .prog-rows { margin-top: 9px; max-height: 72px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+    .prow { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+    .prow .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .prow.ok  .dot { background: var(--success); }
+    .prow.err .dot { background: var(--danger); }
+
+    /* error banner */
+    .err-banner { display: none; margin-bottom: 14px; padding: 12px 16px; border-radius: 10px; font-size: 13px; background: color-mix(in oklab,var(--danger) 10%,var(--surface)); color: var(--danger); border: 1px solid color-mix(in oklab,var(--danger) 25%,transparent); }
+
+    /* ── KPI strip ── */
+    .kpi-strip { display: grid; grid-template-columns: repeat(6,1fr); background: var(--border); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 16px; gap: 1px; }
+    .kpi-cell { background: var(--surface); padding: 16px 18px 14px; display: flex; flex-direction: column; }
+    .kpi-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 6px; }
+    .kpi-val { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+    .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 5px; }
+    .up   { color: var(--success); }
+    .down { color: var(--danger); }
+    .neu  { color: var(--text); }
+
+
+    /* ── table ── */
+    .tbl-card { padding: 0; overflow: hidden; }
+    .tbl-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .tbl-title { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+    .tbl-meta  { font-size: 13px; color: var(--muted); }
+    .tbl-wrap  { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 11px 16px; font-size: 13px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; }
+    tr:last-child td { border-bottom: none; }
+    th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; }
+    .ticker-badge { display: inline-block; padding: 2px 9px; border-radius: 99px; background: var(--surf2); border: 1px solid var(--border); font-size: 12px; font-weight: 600; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .pill.up   { background: color-mix(in oklab,var(--success) 14%,var(--surf2)); color: var(--success); }
+    .pill.down { background: color-mix(in oklab,var(--danger)  14%,var(--surf2)); color: var(--danger); }
+
+    /* failed section */
+    .failed-sec { display: none; border-top: 1px solid var(--border); padding: 16px 20px; }
+    .failed-sec.show { display: block; }
+    .failed-ttl { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--danger); font-weight: 700; margin-bottom: 10px; }
+    .failed-row { display: flex; gap: 12px; align-items: flex-start; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .failed-row:last-child { border-bottom: none; }
+    .failed-ticker { min-width: 60px; font-weight: 700; color: var(--danger); }
+    .failed-reason { color: var(--muted); }
+
+
+        /* ── chart grid ── */
+    .charts-section { margin-bottom: 16px; }
+    .charts-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; margin-bottom: 12px; }
+    .chart-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+    .mini-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px 10px; display: flex; flex-direction: column; }
+
+    .mc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .mc-left .mc-ticker { font-size: 13px; font-weight: 700; letter-spacing: .04em; line-height: 1; }
+    .mc-left .mc-price  { font-size: 11px; color: var(--muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
+    .mc-right { text-align: right; }
+    .mc-right .mc-ret   { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+    .mc-right .mc-wt    { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    .mc-chart-wrap { height: 100px; margin-bottom: 8px; }
+    .mc-chart-wrap canvas { width: 100% !important; height: 100% !important; }
+
+    .mc-periods { display: flex; gap: 4px; margin-bottom: 10px; }
+    .mc-per-btn { flex: 1; height: 24px; border: 1px solid var(--border); border-radius: 6px; background: var(--surf2); color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+    .mc-per-btn:hover  { color: var(--text); border-color: var(--primary); }
+    .mc-per-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .mc-per-btn.reb    { color: var(--gold); border-color: var(--gold); background: transparent; }
+    .mc-per-btn.reb:hover  { background: color-mix(in oklab,var(--gold) 12%,var(--surf2)); }
+    .mc-per-btn.reb.active { background: var(--gold); color: #000; border-color: var(--gold); }
+
+    .mc-fundamentals { display: grid; grid-template-columns: repeat(4,1fr); border-top: 1px solid var(--border); padding-top: 8px; margin-top: auto; }
+    .mc-fund-cell { display: flex; flex-direction: column; align-items: center; }
+    .mc-fund-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 2px; }
+    .mc-fund-val { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    @media (max-width: 1100px) { .chart-grid { grid-template-columns: repeat(3,1fr); } }
+    @media (max-width: 760px)  { .chart-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 460px)  { .chart-grid { grid-template-columns: 1fr; } } }
+    @media (max-width: 900px) {
+      .ctrl-row { grid-template-columns: 1fr; }
+      .kpi-strip { grid-template-columns: repeat(3,1fr); }
+    }
+    @media (max-width: 540px) {
+      .kpi-strip { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+        <polyline points="16 7 22 7 22 13"/>
+      </svg>
+      PortfolioBoard
+    </div>
+    <button class="theme-btn" id="themeToggle" aria-label="Toggle theme">
+      <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </header>
+
+  <!-- Error banner -->
+  <div class="err-banner" id="errBanner"></div>
+
+  <!-- Controls -->
+  <div class="ctrl-row">
+    <div class="card upload-card">
+      <h2>Load portfolio</h2>
+      <p class="hint">Required columns: <code>ticker</code>, <code>weight</code>, <code>price</code>&nbsp;(start price)</p>
+      <div class="date-row">
+        <label for="startDate">Start date</label>
+        <input type="date" id="startDate" class="date-input" value="2026-04-10" />
+      </div>
+      <div class="file-row">
+        <label class="file-label" for="fileInput">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span id="fileLabelTxt">Choose CSV file…</span>
+        </label>
+        <input type="file" id="fileInput" accept=".csv" />
+        <button class="btn" id="loadBtn">Load portfolio</button>
+        <button class="btn btn-refresh" id="refreshBtn" title="Refresh prices" disabled>
+          <svg id="refreshIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="card prog-card idle" id="progCard">
+      <div class="prog-body">
+        <div class="prog-top">
+          <span class="prog-label" id="progLabel">Waiting for upload…</span>
+          <span class="prog-pct"  id="progPct"></span>
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+        <div class="prog-sub" id="progSub"></div>
+        <div class="prog-rows" id="progRows"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="kpi-strip" id="kpiStrip" style="display:none">
+    <div class="kpi-cell">
+      <div class="kpi-lbl">Portfolio return</div>
+      <div class="kpi-val" id="kvPortRet">—</div>
+      <div class="kpi-sub" id="ksSince">—</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-lbl">S&amp;P 500 (SPX)</div>
+      <div class="kpi-val" id="kvSpx">—</div>
+      <div class="kpi-sub" id="ksSpx">—</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-lbl">Alpha</div>
+      <div class="kpi-val" id="kvAlpha">—</div>
+      <div class="kpi-sub">Portfolio – SPX</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-lbl">Positions</div>
+      <div class="kpi-val neu" id="kvPos">—</div>
+      <div class="kpi-sub" id="ksPos">—</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-lbl">Best stock</div>
+      <div class="kpi-val up" id="kvBest">—</div>
+      <div class="kpi-sub up" id="ksBest">—</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-lbl">Worst stock</div>
+      <div class="kpi-val down" id="kvWorst">—</div>
+      <div class="kpi-sub down" id="ksWorst">—</div>
+    </div>
+  </div>
+
+
+  <!-- Charts grid -->
+  <div class="charts-section" id="chartsSection" style="display:none">
+    <div class="charts-section-title">Performance since start date</div>
+    <div class="chart-grid" id="chartGrid"></div>
+  </div>
+
+  <!-- Table -->
+  <div class="card tbl-card">
+    <div class="tbl-head">
+      <div class="tbl-title">Holdings</div>
+      <div class="tbl-meta" id="tblMeta">No portfolio loaded.</div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Name</th>
+            <th class="r">Weight</th>
+            <th class="r">Start price</th>
+            <th class="r">Current price</th>
+            <th class="r">Return</th>
+            <th class="r">Weighted return</th>
+            <th class="r">Day change</th>
+          </tr>
+        </thead>
+        <tbody id="tblBody">
+          <tr><td colspan="8" style="color:var(--muted);padding:22px 16px">Upload a CSV to see holdings here.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="failed-sec" id="failedSec">
+      <div class="failed-ttl" id="failedTtl">Failed tickers</div>
+      <div id="failedList"></div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+<script>
+const API = '';
+
+// ── theme ─────────────────────────────────────────────────────────────────────
+let theme = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+document.documentElement.setAttribute('data-theme', theme);
+document.getElementById('themeToggle').addEventListener('click', () => {
+  theme = theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+});
+
+// ── state ─────────────────────────────────────────────────────────────────────
+let _portRet   = null, _spxRet    = null;
+
+function cv(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+function showErr(msg) { const e = document.getElementById('errBanner'); e.textContent = '⚠ '+msg; e.style.display = 'block'; }
+function clearErr()   { const e = document.getElementById('errBanner'); e.textContent = ''; e.style.display = 'none'; }
+
+function calcRet(start, cur) {
+  if (start == null || +start <= 0) return null;
+  return ((+cur - +start) / +start) * 100;
+}
+function fmtPct(v, digits=2) {
+  if (v == null) return null;
+  return `${v>=0?'+':''}${v.toFixed(digits)}%`;
+}
+function pill(pct) {
+  if (pct == null) return '<span style="color:var(--muted)">—</span>';
+  return `<span class="pill ${pct>=0?'up':'down'}">${fmtPct(pct)}</span>`;
+}
+
+// ── progress ──────────────────────────────────────────────────────────────────
+function progStart(total) {
+  document.getElementById('progCard').classList.remove('idle');
+  document.getElementById('progFill').style.width = '0%';
+  document.getElementById('progPct').textContent  = `0 / ${total}`;
+  document.getElementById('progLabel').textContent = 'Fetching prices…';
+  document.getElementById('progSub').textContent  = '';
+  document.getElementById('progRows').innerHTML   = '';
+}
+function progTick(done, total, ticker, ok, errMsg) {
+  document.getElementById('progFill').style.width = Math.round(done/total*100)+'%';
+  document.getElementById('progPct').textContent  = `${done} / ${total}`;
+  document.getElementById('progSub').textContent  = ok ? `✓ ${ticker}` : `✗ ${ticker}${errMsg?': '+errMsg:''}`;
+  const r = document.createElement('div');
+  r.className = 'prow '+(ok?'ok':'err');
+  r.innerHTML = `<span class="dot"></span><span>${ticker}</span><span style="margin-left:auto">${ok?'ok':(errMsg||'error')}</span>`;
+  const rows = document.getElementById('progRows');
+  rows.appendChild(r);
+  rows.scrollTop = rows.scrollHeight;
+}
+function progDone(n, f) {
+  document.getElementById('progLabel').textContent = `Done — ${n} priced, ${f} failed`;
+  document.getElementById('progFill').style.width = '100%';
+  document.getElementById('progSub').textContent  = '';
+}
+
+// ── CSV validation ────────────────────────────────────────────────────────────
+function validateCsv(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return 'CSV has no data rows.';
+  const hdrs = lines[0].split(',').map(h=>h.trim().toLowerCase());
+  const miss = ['ticker','weight','price'].filter(c=>!hdrs.includes(c));
+  return miss.length ? `CSV missing required column${miss.length>1?'s':''}: ${miss.join(', ')}.` : null;
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+function renderPortKpis(holdings) {
+  let wSum=0, retWSum=0, best=null, worst=null;
+  const priced = holdings.filter(h=>h.start_price!=null);
+  holdings.forEach(h => {
+    const r = calcRet(h.start_price, h.price);
+    if (r==null) return;
+    if (!best  || r>best.ret)  best  = {ticker:h.ticker, ret:r};
+    if (!worst || r<worst.ret) worst = {ticker:h.ticker, ret:r};
+    if (h.weight!=null) { retWSum += r*h.weight; wSum += +h.weight; }
+  });
+  const wr = wSum>0 ? retWSum/wSum : null;
+  _portRet = wr;
+
+  const portEl = document.getElementById('kvPortRet');
+  portEl.textContent = wr!=null ? fmtPct(wr) : '—';
+  portEl.className = 'kpi-val '+(wr==null?'neu':wr>=0?'up':'down');
+  document.getElementById('ksSince').textContent = `Since ${document.getElementById('startDate').value}`;
+
+  document.getElementById('kvPos').textContent = holdings.length;
+  document.getElementById('ksPos').textContent = `${priced.length} priced`;
+
+  if (best)  { document.getElementById('kvBest').textContent  = best.ticker;  document.getElementById('ksBest').textContent  = fmtPct(best.ret); }
+  if (worst) { document.getElementById('kvWorst').textContent = worst.ticker; document.getElementById('ksWorst').textContent = fmtPct(worst.ret); }
+
+  document.getElementById('kpiStrip').style.display = 'grid';
+  calcAlpha();
+}
+
+function renderSpxKpi(data) {
+  _spxRet = data.return;
+  const spxEl = document.getElementById('kvSpx');
+  spxEl.textContent = fmtPct(data.return);
+  spxEl.className   = 'kpi-val '+(data.return>=0?'up':'down');
+  document.getElementById('ksSpx').textContent = `Benchmark since ${data.start_date}`;
+  document.getElementById('kpiStrip').style.display = 'grid';
+  calcAlpha();
+}
+
+function calcAlpha() {
+  if (_portRet==null || _spxRet==null) return;
+  const a = _portRet - _spxRet;
+  const el = document.getElementById('kvAlpha');
+  el.textContent = fmtPct(a);
+  el.className   = 'kpi-val '+(a>=0?'up':'down');
+}
+
+// ── failed tickers ────────────────────────────────────────────────────────────
+function renderFailed(errors) {
+  const sec = document.getElementById('failedSec');
+  if (!errors.length) { sec.classList.remove('show'); return; }
+  document.getElementById('failedTtl').textContent = `${errors.length} failed ticker${errors.length>1?'s':''}`;
+  document.getElementById('failedList').innerHTML = errors.map(e=>`
+    <div class="failed-row">
+      <span class="failed-ticker">${e.ticker}</span>
+      <span class="failed-reason">${e.error||'Unknown error'}</span>
+    </div>`).join('');
+  sec.classList.add('show');
+}
+
+// ── table row ─────────────────────────────────────────────────────────────────
+let _rowCount = 0;
+function addRow(h) {
+  if (_rowCount === 0) document.getElementById('tblBody').innerHTML = '';
+  _rowCount++;
+  const up   = h.change >= 0;
+  const wPct = h.weight!=null ? `${(+h.weight*100).toFixed(2)}%` : '—';
+  const spx  = h.start_price!=null ? `${h.currency} ${(+h.start_price).toFixed(2)}` : '—';
+  const ret  = calcRet(h.start_price, h.price);
+  const wret = (ret!=null && h.weight!=null) ? ret * +h.weight : null;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><span class="ticker-badge">${h.ticker}</span></td>
+    <td>${h.name||'—'}</td>
+    <td class="r">${wPct}</td>
+    <td class="r">${spx}</td>
+    <td class="r">${h.currency} ${(+h.price).toFixed(2)}</td>
+    <td class="r">${pill(ret)}</td>
+    <td class="r">${pill(wret)}</td>
+    <td class="r ${up?'up':'down'}">${up?'+':''}${(+h.change).toFixed(2)} (${up?'+':''}${(+h.change_pct).toFixed(2)}%)</td>`;
+  document.getElementById('tblBody').appendChild(tr);
+}
+
+// ── benchmark ─────────────────────────────────────────────────────────────────
+async function loadBenchmark(startDate) {
+  try {
+    const r = await fetch(`${API}/api/benchmark?start_date=${startDate}`);
+    const d = await r.json();
+    if (d.error) { console.warn('SPX:', d.error); return; }
+    renderSpxKpi(d);
+  } catch(e) { console.warn('SPX fetch failed:', e); }
+}
+
+// ── main load ─────────────────────────────────────────────────────────────────
+async function loadPortfolio() {
+  const file = document.getElementById('fileInput').files[0];
+  if (!file) { showErr('Choose a CSV file first.'); return; }
+
+  const text = await file.text();
+  const verr = validateCsv(text);
+  if (verr) { showErr(verr); return; }
+
+  const startDate = document.getElementById('startDate').value;
+  if (!startDate) { showErr('Please choose a start date.'); return; }
+
+  clearErr();
+  const btn = document.getElementById('loadBtn');
+  btn.disabled = true; btn.textContent = 'Loading…';
+  document.getElementById('refreshBtn').disabled = true;
+  document.getElementById('refreshIcon').classList.add('spinning');
+
+  const totalRows = text.trim().split('\n').filter((_,i)=>i>0&&_.trim()).length;
+  progStart(totalRows);
+  _rowCount = 0;
+  _portRet  = null;
+  _spxRet   = null;
+  document.getElementById('tblBody').innerHTML = '<tr><td colspan="8" style="color:var(--muted);padding:22px 16px">Loading…</td></tr>';
+  document.getElementById('kpiStrip').style.display = 'none';
+  
+  document.getElementById('failedSec').classList.remove('show');
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  try {
+    const res = await fetch(`${API}/api/portfolio/stream`, { method:'POST', body:fd });
+    if (!res.ok) { const j=await res.json().catch(()=>({})); showErr(j.error||`Server error ${res.status}`); return; }
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream:true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop();
+
+      for (const part of parts) {
+        const line = part.replace(/^data: /,'').trim();
+        if (!line) continue;
+        let msg; try { msg = JSON.parse(line); } catch { continue; }
+
+        if (msg.type === 'error')    { showErr(msg.message); break; }
+        if (msg.type === 'progress') {
+          progTick(msg.done, msg.total, msg.ticker, msg.status==='ok', msg.error);
+          if (msg.status === 'ok') {
+            addRow(msg.holding);
+
+          }
+        }
+        if (msg.type === 'done') {
+          progDone(msg.holdings.length, msg.errors.length);
+          document.getElementById('tblMeta').textContent = `${msg.holdings.length} holdings loaded`;
+          renderPortKpis(msg.holdings);
+          renderFailed(msg.errors);
+          loadBenchmark(startDate);
+          loadCharts(msg.holdings, startDate);
+          document.getElementById('refreshBtn').disabled = false;
+        }
+      }
+    }
+  } catch(e) {
+    showErr('Could not connect to backend. Make sure app.py is running on port 5000.');
+  } finally {
+    btn.disabled=false; btn.textContent='Load portfolio';
+    const ri = document.getElementById('refreshIcon');
+    ri.classList.remove('spinning');
+  }
+}
+
+
+// ── mini charts ──────────────────────────────────────────────────────────────
+const _miniCharts  = {};   // canvasId → Chart instance
+const _cardData    = {};   // cardId   → { allDates, allValues, allRawValues, startPrice, rebalanceDate, currency, price }
+const _cardPeriod  = {};   // cardId   → active period key
+const _fundCache   = {};   // ticker   → fundamentals object
+
+function round2(v) { return Math.round(v * 100) / 100; }
+
+function normaliseSeries(rawValues, startPrice) {
+  const base = startPrice != null ? startPrice : (rawValues.find(v => v != null) ?? 1);
+  return rawValues.map(v => v != null ? round2((v / base - 1) * 100) : null);
+}
+
+function colourForReturn(pct) {
+  if (pct == null) return cv('--primary');
+  return pct >= 0 ? cv('--success') : cv('--danger');
+}
+
+function slicePeriod(dates, values, period, rebalanceDate) {
+  if (!dates.length) return { dates, values };
+  if (period === 'REBALANCE') {
+    if (!rebalanceDate) return { dates, values };
+    const idx = dates.findIndex(d => d >= rebalanceDate);
+    const s   = idx >= 0 ? idx : 0;
+    return { dates: dates.slice(s), values: values.slice(s) };
+  }
+  const days = period === '1D' ? 1 : period === '1W' ? 7 : 30;
+  const cutoff = new Date(dates.at(-1));
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutStr = cutoff.toISOString().slice(0,10);
+  const idx = dates.findIndex(d => d >= cutStr);
+  const s   = idx >= 0 ? idx : 0;
+  return { dates: dates.slice(s), values: values.slice(s) };
+}
+
+function makeMiniChart(canvasId, dates, normValues, colour, currency, rawValues) {
+  const el = document.getElementById(canvasId);
+  if (!el) return;
+  if (_miniCharts[canvasId]) { _miniCharts[canvasId].destroy(); }
+  const ctx = el.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 100);
+  g.addColorStop(0, colour + '44'); g.addColorStop(1, colour + '00');
+  _miniCharts[canvasId] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates,
+      datasets: [{
+        data: normValues,
+        borderColor: colour, backgroundColor: g,
+        fill: true, pointRadius: 0, pointHoverRadius: 4,
+        pointHoverBackgroundColor: colour,
+        tension: 0.35, borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'var(--surface)', titleColor: cv('--muted'),
+          bodyColor: cv('--text'), borderColor: cv('--border'), borderWidth: 1, padding: 9,
+          callbacks: {
+            title: ctx => ctx[0].label,
+            label: ctx => {
+              const pct = ctx.parsed.y;
+              const raw = rawValues ? rawValues[ctx.dataIndex] : null;
+              const pStr = pct != null ? ` ${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%` : '';
+              const rStr = raw   != null ? `  ${currency || ''} ${raw.toFixed(2)}` : '';
+              return pStr + rStr;
+            }
+          }
+        }
+      },
+      scales: { x: { display: false }, y: { display: false } }
+    }
+  });
+}
+
+function refreshCard(cardId, period) {
+  const d = _cardData[cardId];
+  if (!d) return;
+  _cardPeriod[cardId] = period;
+
+  // slice raw values, then normalise from first point in slice
+  const { dates, values: rawSlice } = slicePeriod(d.allDates, d.allRawValues, period, d.rebalanceDate);
+  let normSlice;
+  if (d.isNorm) {
+    // portfolio — already indexed to 100
+    const portSlice = slicePeriod(d.allDates, d.allValues, period, d.rebalanceDate).values;
+    normSlice = portSlice.map(v => v != null ? round2(v - 100) : null);
+  } else {
+    normSlice = normaliseSeries(rawSlice, null); // normalise from first point in slice
+  }
+
+  const lastVal = normSlice.filter(v => v != null).at(-1);
+  const colour  = colourForReturn(lastVal);
+  const retStr  = lastVal != null ? `${lastVal >= 0 ? '+' : ''}${lastVal.toFixed(2)}%` : '—';
+
+  // update return display
+  const retEl = document.getElementById(`${cardId}-ret`);
+  if (retEl) { retEl.textContent = retStr; retEl.style.color = colour; }
+
+  makeMiniChart(`canvas-${cardId}`, dates, normSlice, colour, d.currency, rawSlice);
+
+  // update active button
+  document.querySelectorAll(`#${cardId} .mc-per-btn`).forEach(b => {
+    b.classList.toggle('active', b.dataset.period === period);
+  });
+}
+
+async function fetchFundamentals(ticker) {
+  if (_fundCache[ticker]) return _fundCache[ticker];
+  try {
+    const r = await fetch(`${API}/api/fundamentals/${encodeURIComponent(ticker)}`);
+    const d = await r.json();
+    if (!d.error) { _fundCache[ticker] = d; return d; }
+  } catch {}
+  return {};
+}
+
+function renderFundamentals(cardId, funds) {
+  const fmt = (v, suffix='') => v != null ? `${v}${suffix}` : '—';
+  const fmtLarge = v => {
+    if (v == null) return '—';
+    if (v >= 1e12) return (v/1e12).toFixed(1)+'T';
+    if (v >= 1e9)  return (v/1e9).toFixed(1)+'B';
+    if (v >= 1e6)  return (v/1e6).toFixed(1)+'M';
+    return v.toLocaleString();
+  };
+  const cells = [
+    { lbl: 'P/E',     val: fmt(funds.pe != null ? funds.pe.toFixed(1) : null) },
+    { lbl: 'Beta',    val: fmt(funds.beta != null ? funds.beta.toFixed(2) : null) },
+    { lbl: 'Volume',  val: fmtLarge(funds.volume) },
+    { lbl: 'Mkt Cap', val: fmtLarge(funds.mktCap) },
+  ];
+  const el = document.getElementById(`${cardId}-funds`);
+  if (el) el.innerHTML = cells.map(c => `
+    <div class="mc-fund-cell">
+      <span class="mc-fund-lbl">${c.lbl}</span>
+      <span class="mc-fund-val">${c.val}</span>
+    </div>`).join('');
+}
+
+function buildCard(item, rebalanceDate) {
+  const cardId   = item.id;
+  const canvasId = `canvas-${cardId}`;
+  const isPortOrSpx = item.ticker === 'PORTFOLIO' || item.ticker === 'SPX';
+
+  // normalise full series
+  let normVals;
+  if (item.isNorm) {
+    normVals = item.values.map(v => v != null ? round2(v - 100) : null);
+  } else {
+    normVals = normaliseSeries(item.values, item.startPrice);
+  }
+
+  const lastVal  = normVals.filter(v => v != null).at(-1);
+  const colour   = colourForReturn(lastVal);
+  const retStr   = lastVal != null ? `${lastVal >= 0 ? '+' : ''}${lastVal.toFixed(2)}%` : '—';
+  const priceStr = item.price != null ? `${item.currency || ''} ${(+item.price).toFixed(2)}` : '—';
+  const wtStr    = item.weight != null ? `${(item.weight * 100).toFixed(2)}%` : '';
+
+  // store for period switching
+  _cardData[cardId] = {
+    allDates: item.dates, allValues: normVals, allRawValues: item.values,
+    startPrice: item.startPrice, rebalanceDate, currency: item.currency,
+    isNorm: item.isNorm, price: item.price
+  };
+  _cardPeriod[cardId] = 'REBALANCE';
+
+  const card = document.createElement('div');
+  card.className = 'mini-card';
+  card.id = cardId;
+  card.innerHTML = `
+    <div class="mc-top">
+      <div class="mc-left">
+        <div class="mc-ticker">${item.ticker}</div>
+        <div class="mc-price">${priceStr}</div>
+      </div>
+      <div class="mc-right">
+        <div class="mc-ret" id="${cardId}-ret" style="color:${colour}">${retStr}</div>
+        <div class="mc-wt">${wtStr ? wtStr + ' wt' : item.name}</div>
+      </div>
+    </div>
+    <div class="mc-chart-wrap"><canvas id="${canvasId}"></canvas></div>
+    <div class="mc-periods">
+      <button class="mc-per-btn" data-period="1D"        onclick="refreshCard('${cardId}','1D')">1D</button>
+      <button class="mc-per-btn" data-period="1W"        onclick="refreshCard('${cardId}','1W')">1W</button>
+      <button class="mc-per-btn" data-period="1M"        onclick="refreshCard('${cardId}','1M')">1M</button>
+      <button class="mc-per-btn reb" data-period="REBALANCE" onclick="refreshCard('${cardId}','REBALANCE')">REBALANCE</button>
+    </div>
+    <div class="mc-fundamentals" id="${cardId}-funds">
+      <div class="mc-fund-cell"><span class="mc-fund-lbl">P/E</span><span class="mc-fund-val">—</span></div>
+      <div class="mc-fund-cell"><span class="mc-fund-lbl">Beta</span><span class="mc-fund-val">—</span></div>
+      <div class="mc-fund-cell"><span class="mc-fund-lbl">Volume</span><span class="mc-fund-val">—</span></div>
+      <div class="mc-fund-cell"><span class="mc-fund-lbl">Mkt Cap</span><span class="mc-fund-val">—</span></div>
+    </div>`;
+
+  return card;
+}
+
+function renderChartGrid(data, holdings, rebalanceDate) {
+  const grid = document.getElementById('chartGrid');
+  grid.innerHTML = '';
+  Object.keys(_miniCharts).forEach(k => { try { _miniCharts[k].destroy(); } catch{} });
+  Object.keys(_cardData).forEach(k => delete _cardData[k]);
+
+  document.getElementById('chartsSection').style.display = 'block';
+
+  const items = [
+    { id: 'chart-port', ticker: 'PORTFOLIO', name: 'Weighted portfolio', weight: null,
+      dates: data.portfolio.dates, values: data.portfolio.values,
+      price: null, currency: '', startPrice: 100, isNorm: true },
+    { id: 'chart-spx',  ticker: 'SPX', name: 'S&P 500', weight: null,
+      dates: data.benchmark.dates, values: data.benchmark.values,
+      price: data.benchmark.values?.at(-1), currency: 'USD', startPrice: null, isNorm: false },
+  ];
+
+  data.tickers.forEach((t, i) => {
+    const hd     = holdings.find(h => h.ticker === t);
+    const series = data.holdings[t];
+    if (!series?.dates?.length) return;
+    items.push({
+      id: `chart-${t}`, ticker: t, name: hd?.name || t,
+      weight: data.weights[i],
+      dates: series.dates, values: series.values,
+      price: hd?.price, currency: hd?.currency || 'USD',
+      startPrice: data.start_prices[i], isNorm: false
+    });
+  });
+
+  items.forEach(item => {
+    const card = buildCard(item, rebalanceDate);
+    grid.appendChild(card);
+    // draw with REBALANCE period (full series from start date) by default
+    setTimeout(() => refreshCard(item.id, 'REBALANCE'), 0);
+    // fetch fundamentals async for holding cards
+    if (item.ticker !== 'PORTFOLIO' && item.ticker !== 'SPX') {
+      fetchFundamentals(item.ticker).then(f => renderFundamentals(item.id, f));
+    }
+  });
+}
+
+async function loadCharts(holdings, startDate) {
+  const top10 = [...holdings]
+    .filter(h => h.weight != null)
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 10);
+  if (!top10.length) return;
+
+  const tickers     = top10.map(h => h.ticker).join(',');
+  const weights     = top10.map(h => h.weight).join(',');
+  const startPrices = top10.map(h => h.start_price ?? '').join(',');
+
+  try {
+    const res  = await fetch(`${API}/api/charts?start_date=${startDate}&tickers=${encodeURIComponent(tickers)}&weights=${encodeURIComponent(weights)}&start_prices=${encodeURIComponent(startPrices)}`);
+    const data = await res.json();
+    if (data.error) { console.warn('Charts:', data.error); return; }
+    renderChartGrid(data, holdings, startDate);
+  } catch(e) { console.warn('Charts fetch failed:', e); }
+}
+
+
+// ── wiring ─────────────────────────────────────────────────────────────────────
+document.getElementById('fileInput').addEventListener('change', e => {
+  const f = e.target.files[0];
+  document.getElementById('fileLabelTxt').textContent = f ? f.name : 'Choose CSV file…';
+});
+document.getElementById('loadBtn').addEventListener('click', loadPortfolio);
+document.getElementById('refreshBtn').addEventListener('click', loadPortfolio);
+</script>
+</body>
+</html>
