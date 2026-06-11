@@ -1,10 +1,14 @@
 from flask import Flask, jsonify, request, Response, send_file
 from flask_cors import CORS
+from curl_cffi import requests as curl_requests
 import yfinance as yf
-import csv, io, json, time
+import csv, io, json, time, os
 
 app = Flask(__name__)
 CORS(app)
+
+# Shared browser-impersonating session — bypasses Yahoo Finance TLS fingerprinting
+_session = curl_requests.Session(impersonate="chrome")
 
 
 @app.route('/')
@@ -15,7 +19,7 @@ def serve_index():
 # ── helpers ────────────────────────────────────────────────────────────────────
 
 def fetch_price_data(ticker: str):
-    stock = yf.Ticker(ticker.upper())
+    stock = yf.Ticker(ticker.upper(), session=_session)
     fast = stock.fast_info
     price = fast.last_price
     prev_close = fast.previous_close
@@ -41,8 +45,7 @@ def get_stock(ticker):
         data, err = fetch_price_data(ticker)
         if err:
             return jsonify({"error": err}), 400
-        # add history
-        stock = yf.Ticker(ticker.upper())
+        stock = yf.Ticker(ticker.upper(), session=_session)
         hist = stock.history(period="30d")
         data["history"] = [round(float(v), 2) for v in hist["Close"].dropna().tolist()]
         data["dates"]   = [str(d.date()) for d in hist.index.tolist()]
@@ -57,7 +60,7 @@ def get_stock(ticker):
 def get_benchmark():
     try:
         start_date = request.args.get("start_date", "")
-        spx = yf.Ticker("^GSPC")
+        spx = yf.Ticker("^GSPC", session=_session)
         hist = spx.history(start=start_date) if start_date else spx.history(period="1mo")
         if hist.empty:
             return jsonify({"error": "No SPX data"}), 400
@@ -96,7 +99,7 @@ def get_charts():
 
         for ticker in tickers:
             try:
-                hist = yf.Ticker(ticker).history(start=start_date)
+                hist = yf.Ticker(ticker, session=_session).history(start=start_date)
                 if hist.empty:
                     holdings_series[ticker] = {"dates": [], "values": []}
                     continue
@@ -110,7 +113,7 @@ def get_charts():
 
         # benchmark (SPX)
         try:
-            bh   = yf.Ticker("^GSPC").history(start=start_date)
+            bh   = yf.Ticker("^GSPC", session=_session).history(start=start_date)
             bc   = bh["Close"].dropna()
             b_dates  = [str(d.date()) for d in bc.index.tolist()]
             b_values = [round(float(v), 4) for v in bc.tolist()]
@@ -135,12 +138,12 @@ def get_charts():
             port_values.append(round(idx_val, 4))
 
         return jsonify({
-            "tickers":     tickers,
-            "weights":     weights,
+            "tickers":      tickers,
+            "weights":      weights,
             "start_prices": start_prices,
-            "holdings":    holdings_series,
-            "portfolio":   {"dates": all_dates, "values": port_values},
-            "benchmark":   {"dates": b_dates,   "values": b_values},
+            "holdings":     holdings_series,
+            "portfolio":    {"dates": all_dates, "values": port_values},
+            "benchmark":    {"dates": b_dates,   "values": b_values},
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -151,7 +154,7 @@ def get_charts():
 @app.route("/api/fundamentals/<ticker>")
 def get_fundamentals(ticker):
     try:
-        info = yf.Ticker(ticker.upper()).info
+        info = yf.Ticker(ticker.upper(), session=_session).info
         return jsonify({
             "pe":     info.get("trailingPE"),
             "beta":   info.get("beta"),
@@ -183,7 +186,7 @@ def portfolio_stream():
             if req_col not in cols:
                 return jsonify({"error": f"CSV missing required column: {req_col}"}), 400
 
-        rows = [{k.lower().strip(): v for k, v in r.items()} for r in rows]
+        rows  = [{k.lower().strip(): v for k, v in r.items()} for r in rows]
         total = len(rows)
 
     except Exception as e:
@@ -214,7 +217,7 @@ def portfolio_stream():
                        "ticker": ticker, "status": "error", "error": str(e)}
 
             yield f"data: {json.dumps(msg)}\n\n"
-            time.sleep(0.05)   # tiny pause so SSE chunks flush
+            time.sleep(0.05)
 
         done_msg = {"type": "done", "holdings": holdings, "errors": errors}
         yield f"data: {json.dumps(done_msg)}\n\n"
@@ -223,12 +226,10 @@ def portfolio_stream():
                     headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"})
 
 
-
 # ── default portfolio ──────────────────────────────────────────────────────────
 
 @app.route("/api/default-portfolio")
 def default_portfolio():
-    import os
     csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "portfolio.csv")
     if not os.path.exists(csv_path):
         return jsonify({"error": "portfolio.csv not found next to app.py"}), 404
@@ -239,6 +240,6 @@ def default_portfolio():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 if __name__ == "__main__":
-    import os
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
