@@ -59,11 +59,7 @@
     .date-row label { font-size: 13px; color: var(--muted); white-space: nowrap; }
     .date-input { padding: 8px 11px; border-radius: 9px; border: 1px solid var(--border); background: var(--surf2); color: var(--text); font-size: 13px; outline: none; color-scheme: dark light; }
     .date-input:focus { border-color: var(--primary); }
-    .file-row { display: flex; gap: 9px; align-items: center; }
-    .file-label { flex: 1; min-height: 40px; padding: 9px 12px; border-radius: 10px; border: 1px dashed var(--border); background: var(--surf2); color: var(--muted); display: flex; align-items: center; gap: 7px; font-size: 13px; overflow: hidden; white-space: nowrap; cursor: pointer; transition: border-color .15s, color .15s; }
-    .file-label:hover { border-color: var(--primary); color: var(--text); }
-    #fileInput { display: none; }
-    .btn { height: 40px; padding: 0 20px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; transition: opacity .15s; white-space: nowrap; }
+.btn { height: 40px; padding: 0 20px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; transition: opacity .15s; white-space: nowrap; }
     .btn:hover:not(:disabled) { opacity: .82; }
     .btn:disabled { opacity: .4; cursor: not-allowed; }
     .btn-refresh { width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; background: var(--surf2); color: var(--text); border: 1px solid var(--border); flex-shrink: 0; }
@@ -192,27 +188,12 @@
   <!-- Controls -->
   <div class="ctrl-row">
     <div class="card upload-card">
-      <h2>Load portfolio</h2>
-      <p class="hint">Required columns: <code>ticker</code>, <code>weight</code>, <code>price</code>&nbsp;(start price)</p>
+      <h2>Portfolio</h2>
       <div class="date-row">
         <label for="startDate">Start date</label>
         <input type="date" id="startDate" class="date-input" value="2026-04-10" />
       </div>
-      <div class="file-row">
-        <label class="file-label" for="fileInput">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span id="fileLabelTxt">Choose CSV file…</span>
-        </label>
-        <input type="file" id="fileInput" accept=".csv" />
-        <button class="btn" id="loadBtn">Load portfolio</button>
-        <button class="btn btn-refresh" id="refreshBtn" title="Refresh prices" disabled>
-          <svg id="refreshIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="23 4 23 10 17 10"/>
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-          </svg>
-        </button>
       </div>
-    </div>
 
     <div class="card prog-card idle" id="progCard">
       <div class="prog-body">
@@ -463,78 +444,37 @@ async function loadBenchmark(startDate) {
 
 // ── main load ─────────────────────────────────────────────────────────────────
 async function loadPortfolio() {
-  const file = document.getElementById('fileInput').files[0];
-  if (!file) { showErr('Choose a CSV file first.'); return; }
-
-  const text = await file.text();
-  const verr = validateCsv(text);
-  if (verr) { showErr(verr); return; }
-
   const startDate = document.getElementById('startDate').value;
   if (!startDate) { showErr('Please choose a start date.'); return; }
-
   clearErr();
   const btn = document.getElementById('loadBtn');
   btn.disabled = true; btn.textContent = 'Loading…';
   document.getElementById('refreshBtn').disabled = true;
   document.getElementById('refreshIcon').classList.add('spinning');
-
-  const totalRows = text.trim().split('\n').filter((_,i)=>i>0&&_.trim()).length;
-  progStart(totalRows);
-  _rowCount = 0;
-  _portRet  = null;
-  _spxRet   = null;
+  rowCount = 0; portRet = null; spxRet = null;
   document.getElementById('tblBody').innerHTML = '<tr><td colspan="8" style="color:var(--muted);padding:22px 16px">Loading…</td></tr>';
   document.getElementById('kpiStrip').style.display = 'none';
-  
   document.getElementById('failedSec').classList.remove('show');
-
-  const fd = new FormData();
-  fd.append('file', file);
-
   try {
-    const res = await fetch(`${API}/api/portfolio/stream`, { method:'POST', body:fd });
-    if (!res.ok) { const j=await res.json().catch(()=>({})); showErr(j.error||`Server error ${res.status}`); return; }
-
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream:true });
-      const parts = buf.split('\n\n');
-      buf = parts.pop();
-
-      for (const part of parts) {
-        const line = part.replace(/^data: /,'').trim();
-        if (!line) continue;
-        let msg; try { msg = JSON.parse(line); } catch { continue; }
-
-        if (msg.type === 'error')    { showErr(msg.message); break; }
-        if (msg.type === 'progress') {
-          progTick(msg.done, msg.total, msg.ticker, msg.status==='ok', msg.error);
-          if (msg.status === 'ok') {
-            addRow(msg.holding);
-
-          }
-        }
-        if (msg.type === 'done') {
-          progDone(msg.holdings.length, msg.errors.length);
-          document.getElementById('tblMeta').textContent = `${msg.holdings.length} holdings loaded`;
-          renderPortKpis(msg.holdings);
-          renderFailed(msg.errors);
-          loadBenchmark(startDate);
-          loadCharts(msg.holdings, startDate);
-          document.getElementById('refreshBtn').disabled = false;
-        }
-      }
+    const res = await fetch(`${API}/api/portfolio/auto?startdate=${startDate}`);
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      showErr(j.error || `Server error ${res.status}`); return;
     }
+    const data = await res.json();
+    if (data.error) { showErr(data.error); return; }
+    document.getElementById('tblBody').innerHTML = '';
+    data.holdings.forEach(h => addRow(h));
+    document.getElementById('tblMeta').textContent = `${data.holdings.length} holdings loaded`;
+    renderPortKpis(data.holdings);
+    renderFailed(data.errors);
+    loadCharts(data.holdings, startDate);
+    loadBenchmark(startDate);
+    document.getElementById('refreshBtn').disabled = false;
   } catch(e) {
-    showErr('Could not connect to backend. Make sure app.py is running on port 5000.');
+    showErr('Could not connect to backend.');
   } finally {
-    btn.disabled=false; btn.textContent='Load portfolio';
+    btn.disabled = false; btn.textContent = 'Load portfolio';
     const ri = document.getElementById('refreshIcon');
     ri.classList.remove('spinning');
   }
@@ -806,10 +746,6 @@ async function loadCharts(holdings, startDate) {
 
 
 // ── wiring ─────────────────────────────────────────────────────────────────────
-document.getElementById('fileInput').addEventListener('change', e => {
-  const f = e.target.files[0];
-  document.getElementById('fileLabelTxt').textContent = f ? f.name : 'Choose CSV file…';
-});
 document.getElementById('loadBtn').addEventListener('click', loadPortfolio);
 document.getElementById('refreshBtn').addEventListener('click', loadPortfolio);
 </script>
